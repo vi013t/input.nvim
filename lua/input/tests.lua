@@ -1,6 +1,6 @@
-local configure = require("configure")
+local input = require("input")
 
-local primitives = require("configure.primitives")
+local primitives = require("input.primitives")
 
 local tests = {}
 
@@ -9,7 +9,7 @@ function tests.test()
 	local number = primitives.number
 	local string = primitives.string
 
-	local person_info = configure.input({
+	local person_info = input.input({
 		name = string():nonempty(),
 		age = number():nonnegative():max(100),
 		address = {

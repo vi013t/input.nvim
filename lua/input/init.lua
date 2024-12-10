@@ -1,4 +1,4 @@
-local configure = {}
+local input = {}
 
 local input_width = 30
 
@@ -308,7 +308,7 @@ end
 
 ---@param schema Primitive | table<string, Primitive>
 ---@param options InputOptions | nil
-function configure.input(schema, options)
+function input.input(schema, options)
 	setup_highlights()
 	local vim_width = vim.api.nvim_get_option_value("columns", { scope = "global" })
 	local vim_height = vim.api.nvim_get_option_value("lines", { scope = "global" })
@@ -372,4 +372,4 @@ function configure.input(schema, options)
 	redraw(screen, schema)
 end
 
-return configure
+return input
