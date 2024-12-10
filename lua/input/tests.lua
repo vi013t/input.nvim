@@ -1,11 +1,9 @@
-local input = require("input")
-
-local primitives = require("input.primitives")
-
 local tests = {}
 
-
 function tests.test()
+	local input = require("input")
+	local primitives = require("input.primitives")
+
 	local number = primitives.number
 	local string = primitives.string
 

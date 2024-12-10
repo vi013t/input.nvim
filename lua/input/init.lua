@@ -304,7 +304,7 @@ local function redraw(screen, schema)
 	vim.api.nvim_command("startinsert")
 end
 
----@class InputOptions
+---@class InputOptionsq
 
 ---@param schema Primitive | table<string, Primitive>
 ---@param options InputOptions | nil
@@ -313,7 +313,7 @@ function input.input(schema, options)
 	local vim_width = vim.api.nvim_get_option_value("columns", { scope = "global" })
 	local vim_height = vim.api.nvim_get_option_value("lines", { scope = "global" })
 
-	local width = 90
+	local width = 70
 	local height = 30
 
 	local buffer = vim.api.nvim_create_buf(false, true)
