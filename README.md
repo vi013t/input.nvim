@@ -4,5 +4,10 @@
 
 ## Example
 
+This input code:
+
 ![input](./docs/input.png)
+
+Creates this window:
+
 ![output](./docs/output.png)
