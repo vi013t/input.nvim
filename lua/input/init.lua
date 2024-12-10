@@ -318,7 +318,7 @@ local function redraw(screen, schema, options)
 	vim.api.nvim_command("startinsert")
 end
 
----@type InputOptions
+---@type PartialInputOptions
 local default_input_options = {
 	window_options = {
 		width = 70,
@@ -328,18 +328,27 @@ local default_input_options = {
 		border = "rounded"
 	},
 	convert_case = true,
-	title = "Input"
+	title = "Input",
+	on_complete = function() end
 }
 
 ---@class InputOptions
 ---@field convert_case boolean
 ---@field window_options table<any, any>,
 ---@field title string
+---@field on_complete fun(value: table): nil
+
+---@class PartialInputOptions
+---@field convert_case? boolean
+---@field window_options? table<any, any>,
+---@field title? string
+---@field on_complete? fun(value: table): nil
 
 ---@param schema Primitive | table<string, Primitive>
----@param options InputOptions | nil
+---@param options PartialInputOptions | nil
 local function input(schema, options)
-	options = options or default_input_options
+	options = options or {}
+	options = vim.tbl_deep_extend("force", default_input_options, options)
 
 	setup_highlights()
 	local vim_width = vim.api.nvim_get_option_value("columns", { scope = "global" })

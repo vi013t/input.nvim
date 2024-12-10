@@ -17,6 +17,10 @@ function tests.test()
 			zip = integer():positive():max(99999),
 			apartment = string():optional()
 		}
+	}, {
+		on_complete = function(person_info)
+			print(vim.inspect(person_info))
+		end
 	})
 end
 
