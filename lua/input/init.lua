@@ -1,5 +1,3 @@
-local input = {}
-
 local input_width = 30
 
 local function setup_highlights()
@@ -58,7 +56,7 @@ end
 ---@alias InputBox { line: integer, column: integer, }
 
 ---@return InputBox
-local function draw_input_box(buffer, column, width, title, content, state, failure_message)
+local function draw_input_box(buffer, column, width, title, content, state, failure_message, required)
 	-- Highlight
 	local highlight = "ConfigureNeutral"
 	if state == "valid" then
@@ -67,11 +65,13 @@ local function draw_input_box(buffer, column, width, title, content, state, fail
 		highlight = "ConfigureBad"
 	end
 
+	local full_title = " " .. title .. " "
+	if required then full_title = full_title .. "* " end
+
 	local top_line = (" "):rep(column - 1) ..
 		"╭ " ..
-		title ..
-		" " ..
-		("─"):rep(width - 4 - #title) ..
+		full_title ..
+		("─"):rep(width - 3 - #full_title) ..
 		"╮"
 	local middle_line = (" "):rep(column - 1) ..
 		"│" ..
@@ -93,6 +93,7 @@ local function draw_input_box(buffer, column, width, title, content, state, fail
 	vim.api.nvim_buf_set_lines(buffer, -1, -1, true, { middle_line_with_message })
 	vim.api.nvim_buf_set_lines(buffer, -1, -1, true, { bottom_line })
 
+	-- Top Line
 	vim.api.nvim_buf_add_highlight(
 		buffer,
 		-1,
@@ -101,6 +102,17 @@ local function draw_input_box(buffer, column, width, title, content, state, fail
 		0,
 		#top_line
 	)
+
+	if required then
+		vim.api.nvim_buf_add_highlight(
+			buffer,
+			-1,
+			"ConfigureBad",
+			vim.api.nvim_buf_line_count(buffer) - 3,
+			column + 1 + #full_title,
+			column + 2 + #full_title
+		)
+	end
 
 	-- Middle Line
 	vim.api.nvim_buf_add_highlight(
@@ -175,7 +187,7 @@ end
 
 ---@alias Screen { main_buffer: integer, main_window: integer, input_buffers: integer[], input_windows: integer[], close: fun(self): nil }
 
----@param arguments { screen: Screen, value: Primitive | table<string, Primitive>, name?: string, line?: number, column?: number, }
+---@param arguments { screen: Screen, value: Primitive | table<string, Primitive>, name?: string, line?: number, column?: number, content: { line: integer, content: string }[] }
 local function add_input(arguments)
 	if arguments.name == nil then
 		vim.api.nvim_buf_set_lines(arguments.screen.main_buffer, -1, -1, true, { "" })
@@ -218,7 +230,8 @@ local function add_input(arguments)
 			to_title_case(arguments.name),
 			content,
 			state,
-			failure_message
+			failure_message,
+			value.__default == nil
 		)
 		table.insert(arguments.screen.input_boxes, input_box)
 
@@ -261,7 +274,7 @@ local function add_input(arguments)
 	end
 end
 
-local function redraw(screen, schema)
+local function redraw(screen, schema, options)
 	local cursor = vim.api.nvim_win_get_cursor(screen.main_window)[1]
 	local line = assert(vim.api.nvim_buf_get_lines(screen.main_buffer, cursor - 1, cursor, true)[1]:match(
 		"│ ([^%s]*)%s*│"))
@@ -281,6 +294,7 @@ local function redraw(screen, schema)
 	table.insert(screen.content, { line = cursor, content = line })
 
 	vim.api.nvim_buf_set_lines(screen.main_buffer, 0, -1, true, {})
+	vim.api.nvim_buf_set_lines(screen.main_buffer, -1, -1, true, { "  " .. options.title })
 	screen.input_boxes = {}
 
 	add_input({
@@ -304,28 +318,39 @@ local function redraw(screen, schema)
 	vim.api.nvim_command("startinsert")
 end
 
----@class InputOptionsq
+---@type InputOptions
+local default_input_options = {
+	window_options = {
+		width = 70,
+		height = 30,
+		relative = "editor",
+		style = "minimal",
+		border = "rounded"
+	},
+	convert_case = true,
+	title = "Input"
+}
+
+---@class InputOptions
+---@field convert_case boolean
+---@field window_options table<any, any>,
+---@field title string
 
 ---@param schema Primitive | table<string, Primitive>
 ---@param options InputOptions | nil
-function input.input(schema, options)
+local function input(schema, options)
+	options = options or default_input_options
+
 	setup_highlights()
 	local vim_width = vim.api.nvim_get_option_value("columns", { scope = "global" })
 	local vim_height = vim.api.nvim_get_option_value("lines", { scope = "global" })
 
-	local width = 70
-	local height = 30
-
 	local buffer = vim.api.nvim_create_buf(false, true)
-	local window = vim.api.nvim_open_win(buffer, true, {
-		relative = "editor",
-		width = width,
-		height = height,
-		row = math.ceil((vim_height - height) / 2 - 1),
-		col = math.ceil((vim_width - width) / 2),
-		style = "minimal",
-		border = "rounded",
-	})
+
+	local window = vim.api.nvim_open_win(buffer, true, vim.tbl_deep_extend("force", {
+		row = math.ceil((vim_height - options.window_options.height) / 2 - 1),
+		col = math.ceil((vim_width - options.window_options.width) / 2),
+	}, options.window_options))
 
 	---@type Screen
 	local screen = {
@@ -333,22 +358,29 @@ function input.input(schema, options)
 		main_window = window,
 		input_boxes = {},
 		content = {},
-		current_input_box = 1
+		current_input_box = 1,
+		close = function(self)
+			vim.api.nvim_buf_delete(self.main_buffer, { force = true })
+			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'i', false)
+		end
 	}
 
+	-- Mappings
 	vim.keymap.set("i", "<Tab>", function()
 		screen.current_input_box = screen.current_input_box + 1
-		redraw(screen, schema)
+		redraw(screen, schema, options)
 	end, { buffer = screen.main_buffer })
 	vim.keymap.set("i", "<Enter>", function()
 		screen.current_input_box = screen.current_input_box + 1
-		redraw(screen, schema)
+		redraw(screen, schema, options)
 	end, { buffer = screen.main_buffer })
-
-	screen.close = function(self)
-		vim.api.nvim_buf_delete(self.main_buffer, { force = true })
-		vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'i', false)
-	end
+	vim.keymap.set("i", "<Esc>", function()
+		screen:close()
+	end, { buffer = screen.main_buffer })
+	vim.keymap.set("i", "<S-Tab>", function()
+		screen.current_input_box = screen.current_input_box - 1
+		redraw(screen, schema, options)
+	end, { buffer = screen.main_buffer })
 
 	vim.keymap.set("n", "q", function() screen:close() end, { buffer = screen.main_buffer })
 
@@ -361,7 +393,7 @@ function input.input(schema, options)
 	vim.api.nvim_create_autocmd("TextChangedI", {
 		buffer = buffer,
 		callback = function()
-			redraw(screen, schema)
+			redraw(screen, schema, options)
 		end
 	})
 
@@ -369,7 +401,7 @@ function input.input(schema, options)
 		screen.input_boxes[screen.current_input_box].line,
 		screen.input_boxes[screen.current_input_box].column,
 	})
-	redraw(screen, schema)
+	redraw(screen, schema, options)
 end
 
 return input

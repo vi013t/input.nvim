@@ -63,9 +63,23 @@ primitives.number = function()
 			return self
 		end,
 
+		integeric = function(self)
+			table.insert(self.__validation_hooks, {
+				failure_message = "Value must be an integer",
+				test = function(value)
+					return value == math.floor(value)
+				end
+			})
+			return self
+		end,
+
 		default = function(self, value)
 			self.__default = value
 			return self
+		end,
+
+		optional = function(self)
+			return self:default("")
 		end,
 
 		__default = nil,
@@ -92,8 +106,9 @@ end
 
 primitives.string = function()
 	return {
-		validate = function(self, validation, failure_message)
-			table.insert(self.__validation_hooks, validation, failure_message)
+		validate = function(self, validator, failure_message)
+			table.insert(self.__validation_hooks,
+				{ test = validator, failure_message = failure_message or "Invalid value" })
 			return self
 		end,
 
@@ -104,6 +119,44 @@ primitives.string = function()
 					return value ~= ""
 				end
 			})
+			return self
+		end,
+
+		optional = function(self)
+			return self:default("")
+		end,
+
+
+		default = function(self, value)
+			self.__default = value
+			return self
+		end,
+
+		__default = nil,
+		__convert = function(value) return value end,
+		__validation_hooks = {},
+		__type = "string",
+		__order = next_index(),
+
+		__validate = function(self, value)
+			for _, hook in ipairs(self.__validation_hooks) do
+				if not hook.test(value) then
+					return hook.failure_message
+				end
+			end
+			return nil
+		end,
+	}
+end
+
+primitives.integer = function()
+	return primitives.number():integeric()
+end
+
+primitives.list = function()
+	return {
+		validate = function(self, validation, failure_message)
+			table.insert(self.__validation_hooks, validation, failure_message)
 			return self
 		end,
 

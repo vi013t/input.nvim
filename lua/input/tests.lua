@@ -4,21 +4,20 @@ function tests.test()
 	local input = require("input")
 	local primitives = require("input.primitives")
 
-	local number = primitives.number
 	local string = primitives.string
+	local integer = primitives.integer
 
-	local person_info = input.input({
-		name = string():nonempty(),
-		age = number():nonnegative():max(100),
+	input({
+		name = string(),
+		age = integer():nonnegative():max(100),
 		address = {
-			number = number():positive(),
-			street_name = string():nonempty(),
-			city = string():nonempty(),
-			zip = number():positive():max(99999)
+			street = integer():positive():integeric(),
+			city = string(),
+			state = string():validate(function(state) return #state == 2 end, "State must be 2 letters"),
+			zip = integer():positive():max(99999),
+			apartment = string():optional()
 		}
 	})
-
-	print(vim.inspect(person_info))
 end
 
 return tests
