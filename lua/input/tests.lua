@@ -7,7 +7,8 @@ function tests.test()
 	local string = primitives.string
 	local integer = primitives.integer
 
-	input({
+	input(
+		{
 			name = string(),
 			age = integer():positive():max(100),
 			address = {

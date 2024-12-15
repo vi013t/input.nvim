@@ -57,6 +57,17 @@ end
 
 ---@alias InputBox { line: integer, column: integer, content: string, state: Validity }
 
+--- Draws an input box onto the screen and returns an object containing data about the input.
+---
+---@param buffer integer The buffer to draw onto
+---@param column integer The column to draw the box at
+---@param width integer The width of the input box to draw
+---@param title string The name of the field being inputted to draw above the box
+---@param content string The content to fill the box with
+---@param state Validity Whether the input box is valid
+---@param failure_message string The message to display if the box isn't valid
+---@param required boolean Whether the input field is required
+---
 ---@return InputBox
 local function draw_input_box(buffer, column, width, title, content, state, failure_message, required)
 	-- Highlight
@@ -191,9 +202,15 @@ end
 
 ---@param arguments { screen: Screen, value: Primitive | table<string, Primitive>, name?: string, line?: number, column?: number, content: { line: integer, content: string }[] }
 local function add_input(arguments)
-	if arguments.name == nil then
+	local name = arguments.name
+	local function is_first_line()
+		return name == nil
+	end
+
+	if is_first_line() then
 		vim.api.nvim_buf_set_lines(arguments.screen.main_buffer, -1, -1, true, { "" })
 	end
+
 	local line = arguments.line or 1
 	local column = arguments.column or 0
 
@@ -233,14 +250,12 @@ local function add_input(arguments)
 			content,
 			state,
 			failure_message,
-			value.__default == nil
+			not value.__is_optional
 		)
 		table.insert(arguments.screen.input_boxes, input_box)
 
 		return
 	end
-
-	local name = arguments.name
 
 	-- Table of values
 	local value = arguments.value
@@ -263,7 +278,7 @@ local function add_input(arguments)
 		line = line + 3
 	end
 
-	if name == nil then
+	if is_first_line() then
 		vim.api.nvim_buf_set_lines(arguments.screen.main_buffer, -1, -1, true, { "" })
 		vim.api.nvim_buf_set_lines(arguments.screen.main_buffer, -1, -1, true, { "   Confirm" })
 		vim.api.nvim_buf_add_highlight(
@@ -278,8 +293,11 @@ end
 
 local function redraw(screen, schema, options)
 	local cursor = vim.api.nvim_win_get_cursor(screen.main_window)[1]
-	local line = assert(vim.api.nvim_buf_get_lines(screen.main_buffer, cursor - 1, cursor, true)[1]:match(
-		"│ ([^%s]*)%s*│"))
+	local line = assert(
+		vim.api.nvim_buf_get_lines(screen.main_buffer, cursor - 1, cursor, true)
+		[1]
+		:match("│ ([^%s]*)%s*│")
+	)
 
 	local old_index = nil
 	for index, content_line in ipairs(screen.content) do
@@ -346,8 +364,12 @@ local default_input_options = {
 ---@field title? string
 ---@field on_complete? fun(value: table): nil
 
+--- Takes validated input from the user and calls `options.on_complete` with the result.
+---
 ---@param schema Primitive | table<string, Primitive>
 ---@param options PartialInputOptions | nil
+---
+---@return nil
 local function input(schema, options)
 	options = options or {}
 	options = vim.tbl_deep_extend("force", default_input_options, options)

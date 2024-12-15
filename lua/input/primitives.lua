@@ -11,11 +11,23 @@ end
 
 primitives.number = function()
 	return {
+
+		--- Enforces that this number must return true from the given predicate.
+		---
+		---@param validation fun(value: number): boolean
+		---@param error_message string | nil
+		---
+		---@return self
 		validate = function(self, validation, error_message)
 			table.insert(self.__validation_hooks, { test = validation, failure_message = error_message })
 			return self
 		end,
 
+		--- Enforces that this number must at most the given value (inclusive).
+		---
+		---@param max number
+		---
+		---@return self
 		max = function(self, max)
 			table.insert(self.__validation_hooks, {
 				failure_message = "Value cannot be larger than " .. tostring(max),
@@ -26,6 +38,11 @@ primitives.number = function()
 			return self
 		end,
 
+		--- Enforces that this number must at least the given value (inclusive).
+		---
+		---@param min number
+		---
+		---@return self
 		min = function(self, min)
 			table.insert(self.__validation_hooks, {
 				failure_message = "Value cannot be smaller than " .. tostring(min),
@@ -36,6 +53,9 @@ primitives.number = function()
 			return self
 		end,
 
+		--- Enforces that this number must be non-negative (>= 0).
+		---
+		---@return self
 		nonnegative = function(self)
 			return self:min(0)
 		end,
@@ -53,6 +73,9 @@ primitives.number = function()
 			return self
 		end,
 
+		--- Enforces that this number must be negative (< 0).
+		---
+		---@return self
 		negative = function(self)
 			table.insert(self.__validation_hooks, {
 				failure_message = "Value must be negative",
@@ -63,6 +86,9 @@ primitives.number = function()
 			return self
 		end,
 
+		--- Enforces that this number must be an integer (< 0).
+		---
+		---@return self
 		integeric = function(self)
 			table.insert(self.__validation_hooks, {
 				failure_message = "Value must be an integer",
@@ -73,16 +99,27 @@ primitives.number = function()
 			return self
 		end,
 
+		--- Gives this number a default value. The input box will be optional, and if left blank,
+		--- this value will be set as the default.
+		---
+		---@param value number
+		---
+		---@return self
 		default = function(self, value)
+			self.__is_optional = true
 			self.__default = value
 			return self
 		end,
 
+		--- Makes this number input optional. If not specified, it will be `nil`. To give the number
+		--- a default value, use `self:default(value)`.
+		---@return self
 		optional = function(self)
-			return self:default("")
+			return self:default(nil)
 		end,
 
 		__default = nil,
+		__is_optional = false,
 		__convert = function(value)
 			local number = tonumber(value)
 			if number == nil then
@@ -151,16 +188,18 @@ primitives.string = function()
 		end,
 
 		optional = function(self)
-			return self:default("")
+			return self:default(nil)
 		end,
 
 
 		default = function(self, value)
 			self.__default = value
+			self.__is_optional = true
 			return self
 		end,
 
 		__default = nil,
+		__is_optional = false,
 		__convert = function(value) return value end,
 		__validation_hooks = {},
 		__type = "string",
@@ -177,6 +216,7 @@ primitives.string = function()
 	}
 end
 
+--- A number that must be an integer. This is equivalent to calling `number():integeric()`.
 primitives.integer = function()
 	return primitives.number():integeric()
 end
@@ -189,11 +229,13 @@ primitives.list = function()
 		end,
 
 		default = function(self, value)
+			self.__is_optional = true
 			self.__default = value
 			return self
 		end,
 
 		__default = nil,
+		__is_optional = false,
 		__convert = function(value) return value end,
 		__validation_hooks = {},
 		__type = "string",
