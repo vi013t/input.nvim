@@ -53,7 +53,9 @@ local function ordering(value)
 	return math.min(table.unpack(orders))
 end
 
----@alias InputBox { line: integer, column: integer, }
+---@alias Validity "valid" | "invalid" | "neutral"
+
+---@alias InputBox { line: integer, column: integer, content: string, state: Validity }
 
 ---@return InputBox
 local function draw_input_box(buffer, column, width, title, content, state, failure_message, required)
@@ -69,9 +71,9 @@ local function draw_input_box(buffer, column, width, title, content, state, fail
 	if required then full_title = full_title .. "* " end
 
 	local top_line = (" "):rep(column - 1) ..
-		"╭ " ..
+		"╭" ..
 		full_title ..
-		("─"):rep(width - 3 - #full_title) ..
+		("─"):rep(width - 2 - #full_title) ..
 		"╮"
 	local middle_line = (" "):rep(column - 1) ..
 		"│" ..
@@ -109,8 +111,8 @@ local function draw_input_box(buffer, column, width, title, content, state, fail
 			-1,
 			"ConfigureBad",
 			vim.api.nvim_buf_line_count(buffer) - 3,
-			column + 1 + #full_title,
-			column + 2 + #full_title
+			column + #full_title,
+			column + 1 + #full_title
 		)
 	end
 
@@ -153,7 +155,7 @@ local function draw_input_box(buffer, column, width, title, content, state, fail
 			#middle_line_with_message
 		)
 	end
-	return { line = vim.api.nvim_buf_line_count(buffer) - 1, column = column + 3, content = content }
+	return { line = vim.api.nvim_buf_line_count(buffer) - 1, column = column + 3, content = content, state = state }
 end
 
 ---@param value table<string, Primitive>

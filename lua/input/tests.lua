@@ -8,20 +8,22 @@ function tests.test()
 	local integer = primitives.integer
 
 	input({
-		name = string(),
-		age = integer():nonnegative():max(100),
-		address = {
-			street = integer():positive():integeric(),
-			city = string(),
-			state = string():validate(function(state) return #state == 2 end, "State must be 2 letters"),
-			zip = integer():positive():max(99999),
-			apartment = string():optional()
+			name = string(),
+			age = integer():positive():max(100),
+			address = {
+				street = integer():positive(),
+				city = string(),
+				state = string():one_of({ "NY", "PA" }),
+				zip = string():length(5):match("^%d+$"),
+				apartment = string():optional()
+			}
+		},
+		{
+			on_complete = function(person_info)
+				print(vim.inspect(person_info))
+			end
 		}
-	}, {
-		on_complete = function(person_info)
-			print(vim.inspect(person_info))
-		end
-	})
+	)
 end
 
 return tests

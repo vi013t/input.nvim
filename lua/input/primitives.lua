@@ -122,6 +122,34 @@ primitives.string = function()
 			return self
 		end,
 
+		hidden = function(self)
+			self.__hidden = true
+			return self
+		end,
+
+		one_of = function(self, list)
+			return self:validate(
+				function(value) return vim.list_contains(list, value) end,
+				("Value must be either %s"):format(table.concat(list, ", "))
+			)
+		end,
+
+		length = function(self, length)
+			table.insert(self.__validation_hooks, {
+				failure_message = ("Value must be %d characters"):format(length),
+				test = function(value)
+					return #value == length
+				end
+			})
+			return self
+		end,
+
+		match = function(self, pattern)
+			return self:validate(function(value)
+				return value:match(pattern)
+			end, ("Value must match \"%s\""):format(pattern))
+		end,
+
 		optional = function(self)
 			return self:default("")
 		end,
